@@ -18,8 +18,8 @@ LONGITUDE = 24.7276
 TIMEZONE = "Europe/Helsinki"
 
 # On-screen language: "en", "fi", or "sv". (The bottom METAR/TAF strip stays as
-# raw aviation text in all languages.)
-LANGUAGE = "fi"
+# raw aviation text in all languages.) Override for testing with EPD_LANG=sv.
+LANGUAGE = os.environ.get("EPD_LANG", "fi")
 
 # ---------------------------------------------------------------------------
 # Electricity prices (sahkotin.fi -> Nord Pool FI spot)
