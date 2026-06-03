@@ -17,6 +17,10 @@ LONGITUDE = 24.7276
 # are UTC and converted to local via the system tz, so no Python tz lib is needed.
 TIMEZONE = "Europe/Helsinki"
 
+# On-screen language: "en", "fi", or "sv". (The bottom METAR/TAF strip stays as
+# raw aviation text in all languages.)
+LANGUAGE = "fi"
+
 # ---------------------------------------------------------------------------
 # Electricity prices (sahkotin.fi -> Nord Pool FI spot)
 # ---------------------------------------------------------------------------
@@ -48,7 +52,8 @@ AVIATION_ICAO = "EFHK"               # Helsinki-Vantaa
 AVIATION_TAF_LINES = 4               # max TAF lines rendered
 
 # FMI official warnings (CAP feed). Filtered to LATITUDE/LONGITUDE by polygon.
-ALERTS_FEED_URL = "https://alerts.fmi.fi/cap/feed/atom_en-GB.xml"
+# The per-language feed file is chosen in epaper/i18n.py (ALERT_FEED).
+ALERTS_FEED_BASE = "https://alerts.fmi.fi/cap/feed/"
 
 # ---------------------------------------------------------------------------
 # Network

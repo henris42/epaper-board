@@ -10,6 +10,7 @@ from datetime import timedelta
 
 import config
 from epaper import astro
+from epaper import i18n
 from epaper.util import http_get, parse_utc, to_local
 
 # FMI WeatherSymbol3 code -> (category, text, intensity). Category drives the
@@ -180,31 +181,33 @@ def _warnings(hourly):
 
     thunder = [h for h in window if h["category"] == "thunder"]
     if thunder:
-        warns.append(("thunder", "Thunderstorms %s" % _span(thunder), 3))
+        warns.append(("thunder", i18n.t("w_thunder") % _span(thunder), 3))
 
     gust_peak = max(window, key=lambda h: (h["gust"] or 0))
     gp = gust_peak["gust"] or 0
     if gp >= WIND_STRONG_GUST:
-        warns.append(("wind", "Very strong wind, gusts %.0f m/s %s" %
+        warns.append(("wind", i18n.t("w_vwind") %
                       (gp, gust_peak["time"].strftime("%H:%M")), 3))
     elif gp >= WIND_WARN_GUST:
-        warns.append(("wind", "Strong wind, gusts %.0f m/s %s" %
+        warns.append(("wind", i18n.t("w_swind") %
                       (gp, gust_peak["time"].strftime("%H:%M")), 2))
 
     heavy = [h for h in window if h["precip"] >= 4.0]
     if heavy:
-        warns.append(("rain", "Heavy precipitation %s" % _span(heavy), 2))
+        warns.append(("rain", i18n.t("w_precip") % _span(heavy), 2))
 
     snow = [h for h in window if h["category"] == "snow"]
     if snow and not thunder:
-        warns.append(("snow", "Snowfall %s" % _span(snow), 1))
+        warns.append(("snow", i18n.t("w_snow") % _span(snow), 1))
 
     # FMI forecast warning parameters (forest fire, traffic/road): finite >= 1
     # means active. NaN/None means none.
-    for param, label, sev in FMI_WARNING_PARAMS:
+    for param, _label, sev in FMI_WARNING_PARAMS:
         if any((h["warn"].get(param) or 0) >= 1 for h in window):
-            cat = "fire" if "Fire" in param else "traffic"
-            warns.append((cat, label, sev))
+            if "Fire" in param:
+                warns.append(("fire", i18n.t("w_fire"), sev))
+            else:
+                warns.append(("traffic", i18n.t("w_traffic"), sev))
 
     warns.sort(key=lambda w: -w[2])
     return [{"category": c, "text": t} for c, t, _ in warns[:3]]

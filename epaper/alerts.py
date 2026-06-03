@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 import xml.etree.ElementTree as ET
 
 import config
+from epaper import i18n
 from epaper.util import http_get
 
 ATOM = "{http://www.w3.org/2005/Atom}"
@@ -93,7 +94,8 @@ def get_all(lat=None, lon=None):
     lat = config.LATITUDE if lat is None else lat
     lon = config.LONGITUDE if lon is None else lon
 
-    xml = http_get(config.ALERTS_FEED_URL, timeout=config.HTTP_TIMEOUT)
+    xml = http_get(config.ALERTS_FEED_BASE + i18n.ALERT_FEED,
+                   timeout=config.HTTP_TIMEOUT)
     root = ET.fromstring(xml)
     now = datetime.now(timezone.utc)
     horizon = now + timedelta(hours=LOOKAHEAD_HOURS)
@@ -106,7 +108,7 @@ def get_all(lat=None, lon=None):
         if alert is None:
             continue
         info = next((i for i in alert.findall(CAP + "info")
-                     if i.findtext(CAP + "language") == "en-GB"), None)
+                     if i.findtext(CAP + "language") == i18n.ALERT_LANG), None)
         if info is None:
             continue
 

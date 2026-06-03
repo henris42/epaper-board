@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageChops
 import config
 from epaper import icons
 from epaper import finmap
+from epaper import i18n
 from epaper.icons import BLACK, RED, WHITE
 
 W, H = config.EPD_WIDTH, config.EPD_HEIGHT
@@ -87,10 +88,10 @@ def _fmt_temp(t):
 def _header(d, generated_at, stale):
     text(d, (8, 8), config.LOCATION_NAME, _f(26, bold=True))
     now = generated_at
-    datestr = now.strftime("%a %-d %b %Y")
-    upd = "updated %s" % now.strftime("%H:%M")
+    datestr = i18n.fmt_date(now)
+    upd = "%s %s" % (i18n.t("updated"), now.strftime("%H:%M"))
     if stale:
-        upd = "STALE  " + upd
+        upd = i18n.t("stale") + "  " + upd
     text(d, (W - 8, 6), datestr, _f(20, bold=True), anchor="ra")
     text(d, (W - 8, 30), upd, _f(15), fill=RED if stale else BLACK, anchor="ra")
     d.line([6, 44, W - 6, 44], fill=BLACK, width=2)
@@ -118,14 +119,14 @@ def _current(d, cur, sun, moon):
     freezing = temp is not None and temp <= 0
     text(d, (cx, 114), _fmt_temp(temp), _f(50, bold=True),
          fill=RED if freezing else BLACK, anchor="ma")
-    text(d, (cx, 166), cur["text"], _f(17),
+    text(d, (cx, 166), i18n.condition(cur.get("symbol")), _f(17),
          fill=RED if cur.get("bad") else BLACK, anchor="ma")
 
     # wind: speed with a direction arrow (points the way the wind blows)
     wind = cur.get("wind") or 0
     gust = cur.get("gust")
     wind_dir = cur.get("wind_dir")
-    prefix, suffix = "Wind ", "%.0f m/s" % wind
+    prefix, suffix = i18n.t("wind") + " ", "%.0f m/s" % wind
     if gust and gust == gust and gust >= wind + 1:   # finite & meaningfully higher
         suffix += " (%.0f)" % gust
     fnt = _f(15)
@@ -141,7 +142,8 @@ def _current(d, cur, sun, moon):
     # humidity
     hum = cur.get("humidity")
     if hum is not None:
-        text(d, (cx, 207), "Humidity %.0f%%" % hum, _f(15), anchor="ma")
+        text(d, (cx, 207), "%s %.0f%%" % (i18n.t("humidity"), hum), _f(15),
+             anchor="ma")
 
     # sunrise / sunset for today's big view
     if sun and (sun.get("sunrise") or sun.get("sunset")):
@@ -208,7 +210,7 @@ def _feels_like(t, wind):
 # ---------------------------------------------------------------------------
 def _detail_24h(d, hourly, moon):
     x0, x1 = 270, 792
-    text(d, (x0, 49), "Next 24 hours", _f(19, bold=True))
+    text(d, (x0, 49), i18n.t("next24"), _f(19, bold=True))
 
     hours = hourly[:config.DETAIL_HOURS]
     n = len(hours)
@@ -267,7 +269,7 @@ def _detail_24h(d, hourly, moon):
     # if any precip, label the wettest hour
     wettest = max(hours, key=lambda h: h["precip"])
     if wettest["precip"] > 0:
-        text(d, (gx1, 190), "max %.1f mm/h" % wettest["precip"],
+        text(d, (gx1, 190), i18n.t("maxprecip") % wettest["precip"],
              _f(12), anchor="rd")
 
     # hour labels every 3h
@@ -283,18 +285,20 @@ def _electricity(d, prices):
     top = ELEC_TOP
     interval = prices.get("interval", 60)
     res = "15 min" if interval <= 15 else "%d min" % interval
-    text(d, (ELEC_X0 + 6, top + 5), "Electricity  c/kWh", _f(19, bold=True))
-    tw = _bbox(d, "Electricity  c/kWh", _f(19, bold=True))[2]
-    text(d, (ELEC_X0 + 6 + tw + 8, top + 10), "incl. VAT · %s" % res, _f(12))
+    etitle = i18n.t("electricity")
+    text(d, (ELEC_X0 + 6, top + 5), etitle, _f(19, bold=True))
+    tw = _bbox(d, etitle, _f(19, bold=True))[2]
+    text(d, (ELEC_X0 + 6 + tw + 8, top + 10),
+         "%s · %s" % (i18n.t("incl_vat"), res), _f(12))
     # min / avg / max under the title
-    summary = "min %.1f   avg %.1f   max %.1f" % (
-        prices["min"], prices["avg"], prices["max"])
+    summary = "min %.1f   %s %.1f   max %.1f" % (
+        prices["min"], i18n.t("avg"), prices["avg"], prices["max"])
     text(d, (ELEC_X0 + 6, top + 28), summary, _f(13))
 
     # current price: big, top-right of the electricity box
     now = prices["now"]
     if now:
-        nowtxt = "now %.1f" % now["price"]
+        nowtxt = "%s %.1f" % (i18n.t("now"), now["price"])
         text(d, (ELEC_X1 - 4, top + 6), nowtxt, _f(30, bold=True),
              fill=RED if now["over"] else BLACK, anchor="ra")
 
@@ -342,7 +346,7 @@ def _electricity(d, prices):
         if r["is_now"]:
             now_slot = (bx, i)
         # day boundary marker + label
-        dlabel = r["time"].strftime("%a")
+        dlabel = i18n.weekday(r["time"])
         if dlabel != prev_day:
             if prev_day is not None:
                 d.line([bx, cy_top - 4, bx, cy_bot + 4], fill=BLACK, width=1)
@@ -358,7 +362,8 @@ def _electricity(d, prices):
     if now_slot:
         bx, i = now_slot
         d.rectangle([bx - 1, cy_top, bx + bw + 1, cy_bot], outline=BLACK, width=2)
-        text(d, (bx + bw / 2, cy_top - 2), "now", _f(13, bold=True), anchor="md")
+        text(d, (bx + bw / 2, cy_top - 2), i18n.t("now"), _f(13, bold=True),
+             anchor="md")
 
 
 # ---------------------------------------------------------------------------
@@ -450,18 +455,19 @@ def render(weather, prices, aviation=None, alert_polys=None, generated_at=None,
         _detail_24h(d, weather["hourly"], moon)
         _warnings_banner(d, weather.get("warnings"))
     else:
-        text(d, (130, 150), "weather unavailable", _f(20), fill=RED, anchor="mm")
+        text(d, (130, 150), i18n.t("weather_na"), _f(20), fill=RED, anchor="mm")
 
     # bottom-left: warnings map (below today's weather)
     finmap.draw_map(img, MAP_X, MAP_Y, MAP_W, MAP_H, alert_polys or [],
-                    mark=(config.LATITUDE, config.LONGITUDE), title="Warnings")
+                    mark=(config.LATITUDE, config.LONGITUDE),
+                    title=i18n.t("warnings"))
 
     # bottom-right: electricity (beside the map)
     if prices:
         _electricity(d, prices)
     else:
         text(d, ((ELEC_X0 + ELEC_X1) / 2, (ELEC_TOP + AVIATION_TOP) / 2),
-             "electricity prices unavailable", _f(20), fill=RED, anchor="mm")
+             i18n.t("prices_na"), _f(20), fill=RED, anchor="mm")
 
     _aviation(d, aviation)
 

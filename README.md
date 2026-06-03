@@ -131,6 +131,7 @@ All knobs live in [`config.py`](config.py):
 | Setting | Meaning |
 |---|---|
 | `LATITUDE` / `LONGITUDE` / `LOCATION_NAME` | forecast point (default Kauniainen) |
+| `LANGUAGE` | UI language: `en` / `fi` / `sv` (METAR/TAF stays raw) |
 | `PRICE_RED_THRESHOLD_C_KWH` | red threshold, default `10.0` c/kWh |
 | `SAHKOTIN_INCLUDE_VAT` | request VAT-included prices (default true) |
 | `PRICE_QUARTERS` | 15-minute resolution (default true; false = hourly) |
