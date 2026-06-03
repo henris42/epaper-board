@@ -9,7 +9,8 @@ WorkingDirectory=/opt/epaper-display
 # refresh.sh bumps the CPU governor up for the render and back to powersave after.
 Environment=GOV_ACTIVE=conservative
 Environment=GOV_IDLE=powersave
-ExecStart=/opt/epaper-display/scripts/refresh.sh
+# invoke via bash so a lost executable bit (e.g. after a redeploy) can't break it
+ExecStart=/bin/bash /opt/epaper-display/scripts/refresh.sh
 # panel (/dev/gpiomem) and cpufreq governor writes need root
 User=root
 TimeoutStartSec=300

@@ -26,7 +26,7 @@ tar -C "$HERE" -czf "$TARBALL" \
 echo "==> copying to $TARGET:$APP_DIR"
 $SSH "$TARGET" "mkdir -p '$APP_DIR'"
 $SCP "$TARBALL" "$TARGET:/tmp/epaper_deploy.tar.gz"
-$SSH "$TARGET" "tar -C '$APP_DIR' -xzf /tmp/epaper_deploy.tar.gz && rm -f /tmp/epaper_deploy.tar.gz && mkdir -p '$APP_DIR/out'"
+$SSH "$TARGET" "tar -C '$APP_DIR' -xzf /tmp/epaper_deploy.tar.gz && rm -f /tmp/epaper_deploy.tar.gz && mkdir -p '$APP_DIR/out' && chmod +x '$APP_DIR'/scripts/*.sh '$APP_DIR'/scripts/*.py 2>/dev/null || true"
 rm -f "$TARBALL"
 
 if [ "${SETUP:-0}" = "1" ]; then
