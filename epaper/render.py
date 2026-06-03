@@ -453,9 +453,9 @@ def _fit(d, s, fnt, maxw):
 
 
 def _wrap(d, s, fnt, maxw, maxlines):
-    """Word-wrap s to maxw px. Every returned line is guaranteed to fit (an
-    over-long token is truncated with an ellipsis), capped at maxlines; if the
-    text doesn't all fit, the last line ends with an ellipsis."""
+    """Word-wrap s to maxw px: overflow simply continues on the next line, up to
+    maxlines. Each line is still guaranteed to fit (a single over-long token is
+    truncated so it can't overrun the edge)."""
     lines, cur = [], ""
     for word in s.split():
         trial = (cur + " " + word).strip()
@@ -466,11 +466,7 @@ def _wrap(d, s, fnt, maxw, maxlines):
             cur = word
     if cur:
         lines.append(cur)
-
-    fitted = [_fit(d, ln, fnt, maxw) for ln in lines[:maxlines]]   # never overrun
-    if len(lines) > maxlines and fitted:                           # more to show
-        fitted[-1] = _fit(d, fitted[-1].rstrip("…").rstrip() + " …", fnt, maxw)
-    return fitted
+    return [_fit(d, ln, fnt, maxw) for ln in lines[:maxlines]]
 
 
 # ---------------------------------------------------------------------------
