@@ -13,7 +13,6 @@ import config
 from epaper import icons
 from epaper import finmap
 from epaper.icons import BLACK, RED, WHITE
-from epaper.weather import compass
 
 W, H = config.EPD_WIDTH, config.EPD_HEIGHT
 
@@ -122,14 +121,22 @@ def _current(d, cur, sun, moon):
     text(d, (cx, 166), cur["text"], _f(17),
          fill=RED if cur.get("bad") else BLACK, anchor="ma")
 
-    # wind: direction (compass) + speed (+ gust if notably higher)
+    # wind: speed with a direction arrow (points the way the wind blows)
     wind = cur.get("wind") or 0
     gust = cur.get("gust")
-    wd = compass(cur.get("wind_dir"))
-    wtext = ("Wind %s %.0f m/s" % (wd, wind)) if wd else ("Wind %.0f m/s" % wind)
+    wind_dir = cur.get("wind_dir")
+    prefix, suffix = "Wind ", "%.0f m/s" % wind
     if gust and gust == gust and gust >= wind + 1:   # finite & meaningfully higher
-        wtext += " (%.0f)" % gust
-    text(d, (cx, 188), wtext, _f(15), anchor="ma")
+        suffix += " (%.0f)" % gust
+    fnt = _f(15)
+    pw = _bbox(d, prefix, fnt)[2]
+    sw = _bbox(d, suffix, fnt)[2]
+    aw = 20 if (wind_dir is not None and wind >= 0.5) else 0
+    sx = cx - (pw + aw + sw) / 2
+    text(d, (sx, 188), prefix, fnt, anchor="la")
+    if aw:
+        _wind_arrow(d, sx + pw + aw / 2, 196, wind_dir, 8, BLACK)
+    text(d, (sx + pw + aw, 188), suffix, fnt, anchor="la")
 
     # humidity
     hum = cur.get("humidity")
@@ -156,6 +163,22 @@ def _suntimes(d, cx, y, sr, ss):
     x += aw + srw + gap
     _arrow(d, x + 5, y + 9, up=False)
     text(d, (x + aw, y), ss, fnt, anchor="la")
+
+
+def _wind_arrow(d, cx, cy, from_deg, r, color=BLACK):
+    """Arrow centred at (cx, cy) pointing the way the wind blows (downwind =
+    from_deg + 180). Compass bearing: 0=N (up), 90=E (right)."""
+    th = math.radians((from_deg + 180) % 360)
+    dx, dy = math.sin(th), -math.cos(th)          # unit vector toward the tip
+    fx, fy = cx + dx * r, cy + dy * r             # tip
+    bx, by = cx - dx * r, cy - dy * r             # tail
+    d.line([bx, by, fx, fy], fill=color, width=2)
+    head = r * 0.8
+    for ang in (28, -28):                          # two arrowhead wings
+        a = math.radians(ang)
+        rx = (-dx) * math.cos(a) - (-dy) * math.sin(a)
+        ry = (-dx) * math.sin(a) + (-dy) * math.cos(a)
+        d.line([fx, fy, fx + rx * head, fy + ry * head], fill=color, width=2)
 
 
 def _arrow(d, x, y, up, color=BLACK):
