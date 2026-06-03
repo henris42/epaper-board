@@ -50,9 +50,19 @@ BAD_CATEGORIES = {"drizzle", "rain", "showers", "snow", "sleet", "thunder"}
 _NS = {"wfs": "http://www.opengis.net/wfs/2.0",
        "BsWfs": "http://xml.fmi.fi/schema/wfs/2.0"}
 
+# FMI forecast "warning row" parameters -> (on-screen label, severity). Each is
+# NaN when inactive and a positive code when a warning is in effect (same
+# convention as ForestFireWarning). Seasonal: fire in summer, road in winter.
+# (Flooding is NOT a forecast parameter -- FMI serves flood warnings separately.)
+FMI_WARNING_PARAMS = [
+    ("ForestFireWarning", "Forest fire warning", 2),
+    ("RoadWarning", "Traffic weather warning", 2),
+]
+
+_BASE_PARAMS = ["Temperature", "Humidity", "WindSpeedMS", "WindDirection",
+                "WindGust", "WeatherSymbol3", "Precipitation1h"]
 # Parameters requested from FMI (order matters only for the URL).
-_PARAMS = ["Temperature", "Humidity", "WindSpeedMS", "WindDirection",
-           "WindGust", "WeatherSymbol3", "Precipitation1h", "ForestFireWarning"]
+_PARAMS = _BASE_PARAMS + [p for p, _, _ in FMI_WARNING_PARAMS]
 
 # 16-point compass for wind direction (meteorological: direction wind blows FROM)
 _COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
@@ -121,7 +131,7 @@ def _parse(xml_bytes):
             "wind_dir": r.get("WindDirection"),
             "gust": r.get("WindGust"),
             "precip": r.get("Precipitation1h") or 0.0,
-            "fire": r.get("ForestFireWarning"),
+            "warn": {p: r.get(p) for p, _, _ in FMI_WARNING_PARAMS},
             "symbol": int(sym) if sym is not None else None,
             "category": cat,
             "text": text,
@@ -189,10 +199,12 @@ def _warnings(hourly):
     if snow and not thunder:
         warns.append(("Snowfall %s" % _span(snow), 1))
 
-    # FMI ForestFireWarning: finite value (>= 1) means a warning is in effect;
-    # NaN/None means none. Regional + daily, so just flag presence in the window.
-    if any((h.get("fire") or 0) >= 1 for h in window):
-        warns.append(("Forest fire warning", 2))
+    # FMI forecast warning parameters (forest fire, traffic/road, ...): a finite
+    # value >= 1 means a warning is in effect; NaN/None means none. Regional +
+    # daily, so just flag presence anywhere in the window.
+    for param, label, sev in FMI_WARNING_PARAMS:
+        if any((h["warn"].get(param) or 0) >= 1 for h in window):
+            warns.append((label, sev))
 
     warns.sort(key=lambda w: -w[1])
     return [w[0] for w in warns[:3]]

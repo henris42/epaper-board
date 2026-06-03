@@ -11,8 +11,9 @@ A Python app that drives a **Waveshare 7.5" black/white/red e-paper panel**
   weather symbols (night-aware) and precipitation bars. **Bad weather (rain,
   drizzle, snow, sleet, thunder) is drawn in red**, as are sub-zero temperatures.
 - **Weather warnings** — a red alert banner derived from the forecast
-  (thunderstorms, strong wind gusts, heavy precipitation, snowfall, and FMI's
-  forest-fire warning).
+  (thunderstorms, strong wind gusts, heavy precipitation, snowfall, plus FMI's
+  forest-fire and traffic-weather warning parameters). More FMI warning
+  parameters can be added in `FMI_WARNING_PARAMS` (`epaper/weather.py`).
 - **Electricity prices** (Nord Pool FI spot from [sahkotin.fi](https://sahkotin.fi))
   as a **15-minute** bar chart from the previous half hour through whatever is
   published ahead. Slots **at or above the threshold (10 c/kWh incl. VAT) are
