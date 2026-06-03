@@ -63,7 +63,7 @@ def gather():
         ("weather", weather_mod.get_weather),
         ("prices", elec_mod.get_prices),
         ("aviation", aviation_mod.get_aviation),
-        ("alerts", alerts_mod.get_alerts),
+        ("alerts", alerts_mod.get_all),
     ]
     results = {}
     with ThreadPoolExecutor(max_workers=len(sources)) as ex:
@@ -81,13 +81,14 @@ def gather():
     weather = results.get("weather")
     prices = results.get("prices")
     aviation = results.get("aviation")
-    alerts = results.get("alerts")
+    alerts = results.get("alerts") or {}
+    alert_polys = alerts.get("polygons", [])
 
     # Official FMI CAP warnings take priority; fall back to forecast-derived ones
     # for any category the CAP feed doesn't cover (or if CAP is unavailable).
     if weather is not None:
         cap = [{"category": a["category"], "text": a["event"]}
-               for a in (alerts or [])]
+               for a in alerts.get("warnings", [])]
         cap_cats = {w["category"] for w in cap}
         derived = [w for w in weather.get("warnings", [])
                    if w["category"] not in cap_cats]
@@ -98,15 +99,16 @@ def gather():
 
     # stale if either shown dataset came from cache
     stale = bool(errors) and (weather is not None or prices is not None)
-    return weather, prices, aviation, datetime.now().astimezone(), stale, errors
+    return (weather, prices, aviation, alert_polys,
+            datetime.now().astimezone(), stale, errors)
 
 
 def run_once(backend):
-    weather, prices, aviation, generated_at, stale, errors = gather()
+    weather, prices, aviation, alert_polys, generated_at, stale, errors = gather()
     if weather is None and prices is None:
         print("ERROR: no data and no cache; rendering error screen")
-    img = render.render(weather, prices, aviation, generated_at=generated_at,
-                        stale=stale, errors=errors)
+    img = render.render(weather, prices, aviation, alert_polys=alert_polys,
+                        generated_at=generated_at, stale=stale, errors=errors)
     backend.show(img)
     if errors:
         print("completed with warnings: %s" % "; ".join(errors))

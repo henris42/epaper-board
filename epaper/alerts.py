@@ -84,9 +84,12 @@ def _point_in_polygon(px, py, verts):
     return inside
 
 
-def get_alerts(lat=None, lon=None):
-    """Return active/imminent FMI warnings covering (lat, lon), most severe
-    first. Each: {category, event, severity, onset, expires}."""
+def get_all(lat=None, lon=None):
+    """One fetch -> both views of the active warnings:
+      'warnings': those covering (lat, lon), most severe first
+                  (each {category, event, severity, onset, expires})
+      'polygons': every active warning ring [(lon,lat),...] (for the map)
+    """
     lat = config.LATITUDE if lat is None else lat
     lon = config.LONGITUDE if lon is None else lon
 
@@ -95,62 +98,53 @@ def get_alerts(lat=None, lon=None):
     now = datetime.now(timezone.utc)
     horizon = now + timedelta(hours=LOOKAHEAD_HOURS)
 
-    out = []
-    seen = set()
+    warnings, polygons, seen = [], [], set()
     for entry in root.findall(ATOM + "entry"):
         # "fat Atom": the CAP alert is embedded inside <content>
         content = entry.find(ATOM + "content")
         alert = content.find(CAP + "alert") if content is not None else None
         if alert is None:
             continue
-        info = None
-        for cand in alert.findall(CAP + "info"):
-            if cand.findtext(CAP + "language") == "en-GB":
-                info = cand
-                break
+        info = next((i for i in alert.findall(CAP + "info")
+                     if i.findtext(CAP + "language") == "en-GB"), None)
         if info is None:
+            continue
+
+        onset = _parse_time(info.findtext(CAP + "onset"))
+        expires = _parse_time(info.findtext(CAP + "expires"))
+        if (expires and expires < now) or (onset and onset > horizon):
             continue
 
         event = info.findtext(CAP + "event")
         severity = info.findtext(CAP + "severity") or "Unknown"
-        onset = _parse_time(info.findtext(CAP + "onset"))
-        expires = _parse_time(info.findtext(CAP + "expires"))
-
-        # in effect now, or starting within the lookahead window
-        if expires and expires < now:
-            continue
-        if onset and onset > horizon:
-            continue
-
-        # does any area polygon contain our point?
-        hit = False
+        rings = []
         for area in info.findall(CAP + "area"):
             for poly in area.findall(CAP + "polygon"):
-                if _point_in_polygon(lon, lat, _polygon_points(poly.text)):
-                    hit = True
-                    break
-            if hit:
-                break
-        if not hit:
-            continue
+                ring = _polygon_points(poly.text)
+                if len(ring) >= 3:
+                    rings.append(ring)
+        polygons.extend(rings)
 
-        key = (event, severity)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append({
-            "category": _category(event),
-            "event": event,
-            "severity": severity,
-            "onset": onset,
-            "expires": expires,
-        })
+        if any(_point_in_polygon(lon, lat, r) for r in rings):
+            key = (event, severity)
+            if key not in seen:
+                seen.add(key)
+                warnings.append({"category": _category(event), "event": event,
+                                 "severity": severity, "onset": onset,
+                                 "expires": expires})
 
-    out.sort(key=lambda w: -_SEV_RANK.get(w["severity"], 0))
-    return out
+    warnings.sort(key=lambda w: -_SEV_RANK.get(w["severity"], 0))
+    return {"warnings": warnings, "polygons": polygons}
+
+
+def get_alerts(lat=None, lon=None):
+    """FMI warnings covering (lat, lon), most severe first."""
+    return get_all(lat, lon)["warnings"]
 
 
 if __name__ == "__main__":
-    for w in get_alerts():
+    data = get_all()
+    for w in data["warnings"]:
         print("%-9s %-9s %s" % (w["category"], w["severity"], w["event"]))
-    print("(none)" if not get_alerts() else "")
+    print("warnings:", len(data["warnings"]), " active polygons:",
+          len(data["polygons"]))

@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 import config
 from epaper import icons
+from epaper import finmap
 from epaper.icons import BLACK, RED, WHITE
 from epaper.weather import compass
 
@@ -20,6 +21,11 @@ W, H = config.EPD_WIDTH, config.EPD_HEIGHT
 ELEC_TOP = 252
 AVIATION_TOP = 404           # divider above the METAR/TAF text strip
 ELEC_BOTTOM = AVIATION_TOP - 20   # price-chart baseline (room for hour labels)
+
+# compact southern-Finland warnings map, bottom-right of the electricity zone
+MAP_W, MAP_H = 184, 100
+MAP_X, MAP_Y = 600, 302
+ELEC_CHART_RIGHT = MAP_X - 10     # the price chart shrinks to make room
 
 _FONT_CACHE = {}
 
@@ -270,8 +276,8 @@ def _electricity(d, prices):
     if n == 0:
         return
 
-    # chart area
-    cx0, cx1 = 44, W - 12
+    # chart area (right edge pulled in to leave room for the warnings map)
+    cx0, cx1 = 44, ELEC_CHART_RIGHT
     cy_top, cy_bot = top + 52, ELEC_BOTTOM
     threshold = prices["threshold"]
     vmax = max(prices["max"], threshold) * 1.08
@@ -398,8 +404,8 @@ def _fit(d, s, fnt, maxw):
 # ---------------------------------------------------------------------------
 # Public entry points
 # ---------------------------------------------------------------------------
-def render(weather, prices, aviation=None, generated_at=None, stale=False,
-           errors=None):
+def render(weather, prices, aviation=None, alert_polys=None, generated_at=None,
+           stale=False, errors=None):
     """Return an RGB Image of the full screen."""
     if generated_at is None:
         generated_at = datetime.now().astimezone()
@@ -417,8 +423,11 @@ def render(weather, prices, aviation=None, generated_at=None, stale=False,
     if prices:
         _electricity(d, prices)
     else:
-        text(d, (W / 2, (ELEC_TOP + AVIATION_TOP) / 2),
+        text(d, ((44 + ELEC_CHART_RIGHT) / 2, (ELEC_TOP + AVIATION_TOP) / 2),
              "electricity prices unavailable", _f(20), fill=RED, anchor="mm")
+
+    finmap.draw_map(img, MAP_X, MAP_Y, MAP_W, MAP_H, alert_polys or [],
+                    mark=(config.LATITUDE, config.LONGITUDE), title="Warnings")
 
     _aviation(d, aviation)
 

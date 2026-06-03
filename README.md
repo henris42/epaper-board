@@ -149,6 +149,7 @@ main.py
  ├─ epaper/electricity.py  sahkotin → 15-min prices (insecure TLS)
  ├─ epaper/aviation.py     METAR/TAF for EFHK (aviationweather.gov)
  ├─ epaper/alerts.py       FMI CAP warnings (alerts.fmi.fi), polygon-filtered
+ ├─ epaper/finmap.py       compact S-Finland warnings map (hatched warned areas)
  ├─ epaper/icons.py        vector weather icons + phased moon
  ├─ epaper/render.py       PIL → 800×480 black/red/white image
  │   └─ split_planes()     → two 1-bit planes (black, red)
