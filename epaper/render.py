@@ -378,7 +378,7 @@ def _warnings_banner(d, warnings):
     {category, text}."""
     if not warnings:
         return
-    x, y, s = 270, 226, 18
+    x, y, s = 270, 229, 18
     maxx = 793
     fnt = _f(14, bold=True)
     cx = x
