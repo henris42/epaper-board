@@ -18,14 +18,18 @@ from epaper.weather import compass
 W, H = config.EPD_WIDTH, config.EPD_HEIGHT
 
 # vertical layout anchors for the lower half
-ELEC_TOP = 252
+MID_Y = 252                  # horizontal split: weather zone / bottom zone
 AVIATION_TOP = 404           # divider above the METAR/TAF text strip
-ELEC_BOTTOM = AVIATION_TOP - 20   # price-chart baseline (room for hour labels)
+COL_X = 254                  # vertical split: left column / right column
 
-# compact southern-Finland warnings map, bottom-right of the electricity zone
-MAP_W, MAP_H = 184, 100
-MAP_X, MAP_Y = 600, 302
-ELEC_CHART_RIGHT = MAP_X - 10     # the price chart shrinks to make room
+# Layout: left column = current weather (top) + warnings map (bottom);
+#         right column = 24h forecast (top) + electricity (bottom).
+# warnings map (left column, below today's weather)
+MAP_X, MAP_Y, MAP_W, MAP_H = 8, 262, 240, 132
+# electricity (right column, beside the map)
+ELEC_TOP = MID_Y
+ELEC_X0, ELEC_X1 = 260, 792
+ELEC_BOTTOM = 388            # price-chart baseline (room for hour labels)
 
 _FONT_CACHE = {}
 
@@ -137,7 +141,6 @@ def _current(d, cur, sun, moon):
         sr = sun["sunrise"].strftime("%H:%M") if sun.get("sunrise") else "--"
         ss = sun["sunset"].strftime("%H:%M") if sun.get("sunset") else "--"
         _suntimes(d, cx, 227, sr, ss)
-    d.line([254, 50, 254, 246], fill=BLACK, width=1)
 
 
 def _suntimes(d, cx, y, sr, ss):
@@ -255,20 +258,21 @@ def _detail_24h(d, hourly, moon):
 # ---------------------------------------------------------------------------
 def _electricity(d, prices):
     top = ELEC_TOP
-    d.line([6, top, W - 6, top], fill=BLACK, width=2)
     interval = prices.get("interval", 60)
     res = "15 min" if interval <= 15 else "%d min" % interval
-    text(d, (8, top + 6), "Electricity  c/kWh", _f(20, bold=True))
-    tw = _bbox(d, "Electricity  c/kWh", _f(20, bold=True))[2]
-    text(d, (8 + tw + 10, top + 12), "incl. VAT · %s" % res, _f(13))
-
-    now = prices["now"]
+    text(d, (ELEC_X0 + 6, top + 5), "Electricity  c/kWh", _f(19, bold=True))
+    tw = _bbox(d, "Electricity  c/kWh", _f(19, bold=True))[2]
+    text(d, (ELEC_X0 + 6 + tw + 8, top + 10), "incl. VAT · %s" % res, _f(12))
+    # min / avg / max under the title
     summary = "min %.1f   avg %.1f   max %.1f" % (
         prices["min"], prices["avg"], prices["max"])
-    text(d, (W - 8, top + 4), summary, _f(14), anchor="ra")
+    text(d, (ELEC_X0 + 6, top + 28), summary, _f(13))
+
+    # current price: big, top-right of the electricity box
+    now = prices["now"]
     if now:
         nowtxt = "now %.1f" % now["price"]
-        text(d, (W - 8, top + 22), nowtxt, _f(28, bold=True),
+        text(d, (ELEC_X1 - 4, top + 6), nowtxt, _f(30, bold=True),
              fill=RED if now["over"] else BLACK, anchor="ra")
 
     hours = prices["hours"]
@@ -276,9 +280,9 @@ def _electricity(d, prices):
     if n == 0:
         return
 
-    # chart area (right edge pulled in to leave room for the warnings map)
-    cx0, cx1 = 44, ELEC_CHART_RIGHT
-    cy_top, cy_bot = top + 52, ELEC_BOTTOM
+    # chart area
+    cx0, cx1 = ELEC_X0 + 38, ELEC_X1 - 4
+    cy_top, cy_bot = top + 54, ELEC_BOTTOM
     threshold = prices["threshold"]
     vmax = max(prices["max"], threshold) * 1.08
     vmin = min(0.0, prices["min"])
@@ -413,6 +417,10 @@ def render(weather, prices, aviation=None, alert_polys=None, generated_at=None,
     d = ImageDraw.Draw(img)
 
     _header(d, generated_at, stale)
+    # zone dividers: horizontal weather/bottom split + vertical left/right split
+    d.line([6, MID_Y, W - 6, MID_Y], fill=BLACK, width=2)
+    d.line([COL_X, 46, COL_X, AVIATION_TOP], fill=BLACK, width=1)
+
     if weather:
         moon = weather.get("moon")
         _current(d, weather["current"], weather.get("sun"), moon)
@@ -420,14 +428,17 @@ def render(weather, prices, aviation=None, alert_polys=None, generated_at=None,
         _warnings_banner(d, weather.get("warnings"))
     else:
         text(d, (130, 150), "weather unavailable", _f(20), fill=RED, anchor="mm")
+
+    # bottom-left: warnings map (below today's weather)
+    finmap.draw_map(img, MAP_X, MAP_Y, MAP_W, MAP_H, alert_polys or [],
+                    mark=(config.LATITUDE, config.LONGITUDE), title="Warnings")
+
+    # bottom-right: electricity (beside the map)
     if prices:
         _electricity(d, prices)
     else:
-        text(d, ((44 + ELEC_CHART_RIGHT) / 2, (ELEC_TOP + AVIATION_TOP) / 2),
+        text(d, ((ELEC_X0 + ELEC_X1) / 2, (ELEC_TOP + AVIATION_TOP) / 2),
              "electricity prices unavailable", _f(20), fill=RED, anchor="mm")
-
-    finmap.draw_map(img, MAP_X, MAP_Y, MAP_W, MAP_H, alert_polys or [],
-                    mark=(config.LATITUDE, config.LONGITUDE), title="Warnings")
 
     _aviation(d, aviation)
 
