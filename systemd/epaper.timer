@@ -1,0 +1,15 @@
+[Unit]
+Description=Refresh the e-paper display periodically
+
+[Timer]
+# Fire on the wall-clock quarter hours (xx:00/15/30/45) so the refresh lands on
+# the actual electricity MTU intervals. The +5 s offset ensures the system clock
+# has crossed the boundary before we compute the current 15-min price slot.
+OnCalendar=*-*-* *:00/15:05
+# Tight accuracy so systemd doesn't defer the run for power-saving (default 1min).
+AccuracySec=1s
+# Catch up with one run after boot/downtime (also populates the screen at boot).
+Persistent=true
+
+[Install]
+WantedBy=timers.target

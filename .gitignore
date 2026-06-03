@@ -1,0 +1,13 @@
+# rendered output / mock backend / cache
+out/
+
+# python
+__pycache__/
+*.py[cod]
+
+# native helper (built on the device against wiringPi)
+native/*.so
+
+# packaging / misc
+*.tar.gz
+.DS_Store

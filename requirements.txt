@@ -1,0 +1,7 @@
+# Runtime dependencies. Everything else (HTTP, XML, CSV, TLS, timezones) uses the
+# Python standard library so it runs on the target's Python 3.8.
+Pillow>=8.0.0
+
+# GPIO for the real panel on the Odroid C2 (memory-mapped, fast). Installed by
+# scripts/setup_target.sh. Not needed for the mock (PNG) backend.
+#   odroid-wiringpi

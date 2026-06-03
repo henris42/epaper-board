@@ -1,0 +1,15 @@
+[Unit]
+Description=E-paper weather + electricity display (one refresh)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/epaper-display
+# refresh.sh bumps the CPU governor up for the render and back to powersave after.
+Environment=GOV_ACTIVE=conservative
+Environment=GOV_IDLE=powersave
+ExecStart=/opt/epaper-display/scripts/refresh.sh
+# panel (/dev/gpiomem) and cpufreq governor writes need root
+User=root
+TimeoutStartSec=300
