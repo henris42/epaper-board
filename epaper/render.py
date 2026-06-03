@@ -338,6 +338,7 @@ def _electricity(d, prices):
     bw = (cx1 - cx0) / n
     now_slot = None
     prev_day = None
+    day_labels = []                          # drawn last, on white boxes
     for i, r in enumerate(hours):
         bx = cx0 + i * bw
         col = RED if r["over"] else BLACK
@@ -345,12 +346,12 @@ def _electricity(d, prices):
         d.rectangle([bx, min(y0v, y_base), bx + bw, max(y0v, y_base)], fill=col)
         if r["is_now"]:
             now_slot = (bx, i)
-        # day boundary marker + label
+        # day boundary marker; the label itself is deferred
         dlabel = i18n.weekday(r["time"])
         if dlabel != prev_day:
             if prev_day is not None:
                 d.line([bx, cy_top - 4, bx, cy_bot + 4], fill=BLACK, width=1)
-            text(d, (bx + 3, cy_bot + 4), dlabel, _f(14, bold=True), anchor="la")
+            day_labels.append((bx, dlabel))
             prev_day = dlabel
         # hour labels every 3h, on the hour (skip midnight; the day name marks it)
         if (r["time"].minute == 0 and r["time"].hour % 3 == 0
@@ -358,12 +359,25 @@ def _electricity(d, prices):
             d.line([bx, cy_bot, bx, cy_bot + 3], fill=BLACK, width=1)
             text(d, (bx, cy_bot + 4), r["time"].strftime("%H"), _f(12), anchor="ma")
 
-    # highlight the current slot last so it sits on top
+    # highlight the current slot
     if now_slot:
         bx, i = now_slot
         d.rectangle([bx - 1, cy_top, bx + bw + 1, cy_bot], outline=BLACK, width=2)
         text(d, (bx + bw / 2, cy_top - 2), i18n.t("now"), _f(13, bold=True),
              anchor="md")
+
+    # if two day labels are within a label width, keep only the later one
+    day_labels = [dl for j, dl in enumerate(day_labels)
+                  if j + 1 >= len(day_labels) or day_labels[j + 1][0] - dl[0] >= 30]
+
+    # day labels last, each on a white box; later one wins where they overlap
+    dfnt = _f(14, bold=True)
+    for bx, dlabel in day_labels:
+        l, tt, rr, bb = _bbox(d, dlabel, dfnt)
+        lx, ly = bx + 3, cy_bot + 4
+        d.rectangle([lx - 2, ly - 1, lx + (rr - l) + 2, ly + (bb - tt) + 1],
+                    fill=WHITE)
+        text(d, (lx, ly), dlabel, dfnt, anchor="la")
 
 
 # ---------------------------------------------------------------------------
