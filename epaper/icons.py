@@ -29,21 +29,22 @@ def _sun(d, cx, cy, r, color):
 
 
 def _moon(d, cx, cy, r, illum=0.5, waxing=True, color=BLACK):
-    """A phased moon glyph: the lit limb is drawn as solid ink, so a crescent
-    reads as the familiar curved sliver and a full moon as a solid disc."""
+    """A phased moon glyph drawn the natural way: the lit part is left white
+    (paper) and the shadow is filled with ink. So a full moon is an open white
+    circle, a new moon a solid ink disc, and a crescent a white sliver."""
     illum = max(0.0, min(1.0, illum))
     c = 2 * illum - 1                       # -1 new ... +1 full
-    # base outline (so gibbous/new still read as a disc)
+    # outline so a white full moon still reads as a disc
     d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=color, width=2)
     r2 = r * r
     for dy in range(-int(r), int(r) + 1):
         hw = math.sqrt(max(0.0, r2 - dy * dy))
         if hw < 0.5:
             continue
-        if waxing:                          # lit on the right
-            x_lo, x_hi = cx - c * hw, cx + hw
-        else:                               # lit on the left
-            x_lo, x_hi = cx - hw, cx + c * hw
+        if waxing:                          # lit on the right -> shadow on left
+            x_lo, x_hi = cx - hw, cx - c * hw
+        else:                               # lit on the left -> shadow on right
+            x_lo, x_hi = cx + c * hw, cx + hw
         if x_hi - x_lo > 0.5:
             d.line([x_lo, cy + dy, x_hi, cy + dy], fill=color, width=1)
 
