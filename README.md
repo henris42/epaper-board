@@ -171,3 +171,8 @@ so a flaky network never blanks the panel.
 - **Tomorrow's prices missing** — Nord Pool publishes them ~14:15 local; before
   that the chart only shows through end of today.
 - **Wrong times** — set the device timezone: `timedatectl set-timezone Europe/Helsinki`.
+
+## License
+
+MIT — see [LICENSE](LICENSE). The bundled DejaVu fonts in `fonts/` are
+distributed under their own permissive (Bitstream Vera / public-domain) license.

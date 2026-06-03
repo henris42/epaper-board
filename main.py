@@ -50,36 +50,35 @@ def gather():
 
     Returns (weather, prices, generated_at, stale, errors).
     """
+    from concurrent.futures import ThreadPoolExecutor
+
     cache = _load_cache()
     errors = []
     now = datetime.now(timezone.utc)
 
-    weather = None
-    try:
-        weather = weather_mod.get_weather()
-        cache["weather"] = weather
-        cache["weather_ts"] = now
-    except Exception as exc:  # noqa: BLE001
-        errors.append("weather: %s" % exc)
-        weather = cache.get("weather")
+    # The three sources are independent network fetches -- run them concurrently
+    # so the total wait is the slowest one, not the sum.
+    sources = [
+        ("weather", weather_mod.get_weather),
+        ("prices", elec_mod.get_prices),
+        ("aviation", aviation_mod.get_aviation),
+    ]
+    results = {}
+    with ThreadPoolExecutor(max_workers=len(sources)) as ex:
+        futures = {ex.submit(fn): key for key, fn in sources}
+        for fut, key in futures.items():
+            try:
+                results[key] = fut.result()
+                cache[key] = results[key]
+                cache[key + "_ts"] = now
+            except Exception as exc:  # noqa: BLE001
+                label = "metar/taf" if key == "aviation" else key
+                errors.append("%s: %s" % (label, exc))
+                results[key] = cache.get(key)
 
-    prices = None
-    try:
-        prices = elec_mod.get_prices()
-        cache["prices"] = prices
-        cache["prices_ts"] = now
-    except Exception as exc:  # noqa: BLE001
-        errors.append("prices: %s" % exc)
-        prices = cache.get("prices")
-
-    aviation = None
-    try:
-        aviation = aviation_mod.get_aviation()
-        cache["aviation"] = aviation
-        cache["aviation_ts"] = now
-    except Exception as exc:  # noqa: BLE001
-        errors.append("metar/taf: %s" % exc)
-        aviation = cache.get("aviation")
+    weather = results.get("weather")
+    prices = results.get("prices")
+    aviation = results.get("aviation")
 
     if weather is not None or prices is not None or aviation is not None:
         _save_cache(cache)

@@ -7,7 +7,7 @@ threshold line, and freezing temperatures / thunder warnings.
 import math
 from datetime import datetime
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 import config
 from epaper import icons
@@ -250,10 +250,10 @@ def _electricity(d, prices):
     now = prices["now"]
     summary = "min %.1f   avg %.1f   max %.1f" % (
         prices["min"], prices["avg"], prices["max"])
-    text(d, (W - 8, top + 8), summary, _f(16), anchor="ra")
+    text(d, (W - 8, top + 4), summary, _f(14), anchor="ra")
     if now:
         nowtxt = "now %.1f" % now["price"]
-        text(d, (W - 8, top + 30), nowtxt, _f(18, bold=True),
+        text(d, (W - 8, top + 22), nowtxt, _f(28, bold=True),
              fill=RED if now["over"] else BLACK, anchor="ra")
 
     hours = prices["hours"]
@@ -416,20 +416,22 @@ def render(weather, prices, aviation=None, generated_at=None, stale=False,
 def split_planes(img):
     """Split an RGB(black/red/white) image into (black_img, red_img) as mode-'1'
     images where pixel 0 = ink, 255 = blank, matching the panel buffer builder.
+
+    Vectorised with PIL channel ops (C-speed) instead of a per-pixel Python loop
+    -- the per-pixel version took seconds on the Odroid C2.
     """
-    rgb = img.convert("RGB")
-    r, g, b = rgb.split()
-    # black plane: pixels that are dark in all channels
-    # red plane: red-dominant pixels
-    px = rgb.load()
-    black = Image.new("1", (W, H), 1)
-    red = Image.new("1", (W, H), 1)
-    bpx, rpx = black.load(), red.load()
-    for y in range(H):
-        for x in range(W):
-            pr, pg, pb = px[x, y]
-            if pr > 160 and pg < 110 and pb < 110:
-                rpx[x, y] = 0          # red ink
-            elif pr < 128 and pg < 128 and pb < 128:
-                bpx[x, y] = 0          # black ink
+    r, g, b = img.convert("RGB").split()
+    # per-channel 0/255 threshold masks (mode 'L'); multiply acts as logical AND
+    hi = lambda ch, t: ch.point(lambda v, t=t: 255 if v > t else 0)
+    lo = lambda ch, t: ch.point(lambda v, t=t: 255 if v < t else 0)
+    AND = ImageChops.multiply
+
+    # 255 where red (red-dominant); 255 where black (dark in all channels).
+    # red is excluded from black automatically since red needs r > 160.
+    red_mask = AND(AND(hi(r, 160), lo(g, 110)), lo(b, 110))
+    black_mask = AND(AND(lo(r, 128), lo(g, 128)), lo(b, 128))
+
+    # driver wants 0 = ink: invert (mask is 255 at ink), then pack to 1-bit
+    black = ImageChops.invert(black_mask).convert("1", dither=Image.NONE)
+    red = ImageChops.invert(red_mask).convert("1", dither=Image.NONE)
     return black, red
