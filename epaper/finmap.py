@@ -57,33 +57,64 @@ def _projector(x, y, w, h, bbox=BBOX):
     return proj
 
 
+def _dashed(d, pts, fill, dash=3, gap=2, width=1):
+    """Draw a dashed polyline through pts."""
+    for i in range(len(pts) - 1):
+        (x1, y1), (x2, y2) = pts[i], pts[i + 1]
+        seg = math.hypot(x2 - x1, y2 - y1)
+        if seg < 1:
+            continue
+        ux, uy = (x2 - x1) / seg, (y2 - y1) / seg
+        t = 0.0
+        while t < seg:
+            a = (x1 + ux * t, y1 + uy * t)
+            t2 = min(seg, t + dash)
+            b = (x1 + ux * t2, y1 + uy * t2)
+            d.line([a, b], fill=fill, width=width)
+            t += dash + gap
+
+
 def draw_map(img, x, y, w, h, warning_polys, mark=None, title="Warnings"):
     """warning_polys: list of rings, each a list of (lon, lat). mark: (lat, lon)
-    for our location. Warned areas are red-hatched so the map stays readable.
+    for our location.
 
-    Rendered into its own w x h tile and pasted, so geometry reaching outside the
-    map box clips cleanly instead of spilling across the screen."""
-    from PIL import Image, ImageDraw, ImageFont
+    Warnings are issued per province, so we draw dashed province (maakunta)
+    borders and limit the red hatch to land within the warned areas. Rendered
+    into its own w x h tile and pasted, so geometry clips to the map box."""
+    from PIL import Image, ImageDraw, ImageFont, ImageChops
+    from epaper import finregions
     import config
     w, h = int(w), int(h)
     m = Image.new("RGB", (w, h), WHITE)
     md = ImageDraw.Draw(m)
     proj = _projector(0, 0, w, h, BBOX)
 
-    # warned areas as a red diagonal hatch (polygon mask -> paste)
-    mask = Image.new("1", (w, h), 0)
-    kd = ImageDraw.Draw(mask)
+    prov_rings = [[proj(lon, lat) for lon, lat in ring]
+                  for _, rings in finregions.PROVINCES for ring in rings]
+
+    # land mask (union of provinces) and warned mask (CAP polygons)
+    land = Image.new("1", (w, h), 0)
+    ld = ImageDraw.Draw(land)
+    for pts in prov_rings:
+        if len(pts) >= 3:
+            ld.polygon(pts, fill=1)
+    warned = Image.new("1", (w, h), 0)
+    wd = ImageDraw.Draw(warned)
     for ring in warning_polys:
         pts = [proj(lon, lat) for lon, lat in ring]
         if len(pts) >= 3:
-            kd.polygon(pts, fill=1)
+            wd.polygon(pts, fill=1)
+    # limit hatch to land within warned provinces
+    hatch_mask = ImageChops.logical_and(warned, land)
     hatch = Image.new("RGB", (w, h), WHITE)
     hd = ImageDraw.Draw(hatch)
-    for i in range(-h, w, 7):
+    for i in range(-h, w, 8):
         hd.line([(i, 0), (i + h, h)], fill=RED, width=1)
-    m.paste(hatch, (0, 0), mask)
+    m.paste(hatch, (0, 0), hatch_mask)
 
-    # coastline
+    # dashed province borders, then solid coastline on top
+    for pts in prov_rings:
+        _dashed(md, pts, BLACK, dash=3, gap=2, width=1)
     md.line([proj(lon, lat) for lon, lat in FIN_OUTLINE], fill=BLACK, width=2)
 
     # cities
