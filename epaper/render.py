@@ -340,17 +340,23 @@ def _warn_triangle(d, x, y, s, color=RED):
 
 
 def _warnings_banner(d, warnings):
-    """Compact red alert line on the lower-right of the weather zone."""
+    """Lower-right of the weather zone: an icon + label per active warning
+    (FMI CAP warning, or a forecast-derived fallback). warnings is a list of
+    {category, text}."""
     if not warnings:
         return
-    x, y = 270, 230
-    _warn_triangle(d, x, y - 1, 15)
-    msg = "  ·  ".join(warnings)
-    # truncate to fit the available width
-    avail = 792 - (x + 22)
-    while msg and _bbox(d, msg, _f(14, bold=True))[2] > avail:
-        msg = msg[:-2]
-    text(d, (x + 22, y), msg, _f(14, bold=True), fill=RED)
+    x, y, s = 270, 226, 18
+    maxx = 793
+    fnt = _f(14, bold=True)
+    cx = x
+    for w in warnings:
+        if cx + s + 30 > maxx:
+            break
+        icons.draw_warning_icon(d, w.get("category", "generic"), cx, y, s, color=RED)
+        cx += s + 3
+        label = _fit(d, w.get("text", ""), fnt, maxx - cx)
+        text(d, (cx, y + 1), label, fnt, fill=RED)
+        cx += _bbox(d, label, fnt)[2] + 14
 
 
 # ---------------------------------------------------------------------------

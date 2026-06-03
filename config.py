@@ -47,6 +47,9 @@ DETAIL_HOURS = 24                    # hours shown in the detailed strip
 AVIATION_ICAO = "EFHK"               # Helsinki-Vantaa
 AVIATION_TAF_LINES = 4               # max TAF lines rendered
 
+# FMI official warnings (CAP feed). Filtered to LATITUDE/LONGITUDE by polygon.
+ALERTS_FEED_URL = "https://alerts.fmi.fi/cap/feed/atom_en-GB.xml"
+
 # ---------------------------------------------------------------------------
 # Network
 # ---------------------------------------------------------------------------

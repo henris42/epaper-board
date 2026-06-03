@@ -173,3 +173,61 @@ def draw_icon(d, category, x, y, size, color=BLACK, accent=RED,
         _wind(d, x + size * 0.12, y + size * 0.22, size * 0.76, size * 0.56, color)
         return
     _cloud(d, x + size * 0.08, y + size * 0.2, size * 0.84, size * 0.5, color)
+
+
+# --- warning icons (for the alert banner) ----------------------------------
+def draw_warning_icon(d, category, x, y, s, color=RED):
+    """Compact alert glyph in an s x s box. Categories map from FMI CAP events:
+    fire flood traffic wind thunder rain snow heat cold (+ generic triangle)."""
+    cx, cy = x + s / 2, y + s / 2
+    if category == "fire":
+        d.polygon([(cx, y + 0.03 * s), (x + 0.80 * s, y + 0.45 * s),
+                   (x + 0.70 * s, y + 0.82 * s), (cx, y + 0.97 * s),
+                   (x + 0.30 * s, y + 0.82 * s), (x + 0.20 * s, y + 0.45 * s)],
+                  fill=color)
+        d.polygon([(cx, y + 0.46 * s), (x + 0.62 * s, y + 0.70 * s),
+                   (cx, y + 0.88 * s), (x + 0.38 * s, y + 0.70 * s)], fill=WHITE)
+    elif category == "flood":
+        for yy in (y + 0.5 * s, y + 0.72 * s, y + 0.94 * s):
+            pts = [(x + 0.05 * s + i, yy + math.sin(i / s * 4 * math.pi) * 0.05 * s)
+                   for i in range(0, int(0.9 * s) + 1, 2)]
+            d.line(pts, fill=color, width=2)
+    elif category == "traffic":
+        d.rectangle([x + 0.08 * s, y + 0.46 * s, x + 0.92 * s, y + 0.72 * s],
+                    outline=color, width=2)
+        d.rectangle([x + 0.30 * s, y + 0.30 * s, x + 0.70 * s, y + 0.48 * s],
+                    outline=color, width=2)
+        r = 0.1 * s
+        for wx in (x + 0.30 * s, x + 0.70 * s):
+            d.ellipse([wx - r, y + 0.66 * s, wx + r, y + 0.66 * s + 2 * r], fill=color)
+    elif category == "wind":
+        _wind(d, x + 0.08 * s, y + 0.25 * s, 0.84 * s, 0.5 * s, color)
+    elif category == "thunder":
+        d.polygon([(cx + 0.08 * s, y + 0.04 * s), (x + 0.25 * s, y + 0.56 * s),
+                   (cx, y + 0.56 * s), (x + 0.40 * s, y + 0.96 * s),
+                   (x + 0.78 * s, y + 0.42 * s), (cx + 0.04 * s, y + 0.42 * s)],
+                  fill=color)
+    elif category == "rain":
+        for i in range(3):
+            dx = x + (0.28 + 0.22 * i) * s
+            d.line([dx + 0.06 * s, y + 0.2 * s, dx - 0.06 * s, y + 0.72 * s],
+                   fill=color, width=2)
+    elif category == "snow":
+        _flakes(d, x + 0.1 * s, y + 0.25 * s, 0.8 * s, color, 3)
+    elif category in ("heat", "cold"):
+        sx, r = x + 0.5 * s, 0.14 * s
+        d.rectangle([sx - 0.06 * s, y + 0.1 * s, sx + 0.06 * s, y + 0.64 * s],
+                    outline=color, width=2)
+        d.ellipse([sx - r, y + 0.6 * s, sx + r, y + 0.6 * s + 2 * r],
+                  outline=color, width=2)
+        if category == "heat":
+            d.rectangle([sx - 0.03 * s, y + 0.24 * s, sx + 0.03 * s, y + 0.64 * s],
+                        fill=color)
+        d.ellipse([sx - r * 0.55, y + 0.64 * s, sx + r * 0.55, y + 0.64 * s + 1.4 * r],
+                  fill=color)
+    else:                                   # generic warning triangle with "!"
+        d.line([(cx, y + 0.08 * s), (x + 0.95 * s, y + 0.9 * s),
+                (x + 0.05 * s, y + 0.9 * s), (cx, y + 0.08 * s)],
+               fill=color, width=2, joint="curve")
+        d.line([cx, y + 0.4 * s, cx, y + 0.66 * s], fill=color, width=2)
+        d.line([cx, y + 0.74 * s, cx, y + 0.80 * s], fill=color, width=2)

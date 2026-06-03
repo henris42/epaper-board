@@ -10,10 +10,11 @@ A Python app that drives a **Waveshare 7.5" black/white/red e-paper panel**
 - **Next 24 hours** — official FMI forecast as a temperature curve with hourly
   weather symbols (night-aware) and precipitation bars. **Bad weather (rain,
   drizzle, snow, sleet, thunder) is drawn in red**, as are sub-zero temperatures.
-- **Weather warnings** — a red alert banner derived from the forecast
-  (thunderstorms, strong wind gusts, heavy precipitation, snowfall, plus FMI's
-  forest-fire and traffic-weather warning parameters). More FMI warning
-  parameters can be added in `FMI_WARNING_PARAMS` (`epaper/weather.py`).
+- **Weather warnings** — official **FMI CAP warnings** (`alerts.fmi.fi`) filtered
+  to the location by point-in-polygon, shown as a red **icon + label** banner
+  (fire, flood, traffic, wind, thunder, rain, snow, heat, cold, …). Falls back to
+  forecast-derived warnings (strong gusts, heavy precip, …) for any category the
+  CAP feed doesn't cover or if it's unavailable.
 - **Electricity prices** (Nord Pool FI spot from [sahkotin.fi](https://sahkotin.fi))
   as a **15-minute** bar chart from the previous half hour through whatever is
   published ahead. Slots **at or above the threshold (10 c/kWh incl. VAT) are
@@ -147,6 +148,7 @@ main.py
  ├─ epaper/astro.py        sun day/night, sunrise/sunset, moon phase (no network)
  ├─ epaper/electricity.py  sahkotin → 15-min prices (insecure TLS)
  ├─ epaper/aviation.py     METAR/TAF for EFHK (aviationweather.gov)
+ ├─ epaper/alerts.py       FMI CAP warnings (alerts.fmi.fi), polygon-filtered
  ├─ epaper/icons.py        vector weather icons + phased moon
  ├─ epaper/render.py       PIL → 800×480 black/red/white image
  │   └─ split_planes()     → two 1-bit planes (black, red)

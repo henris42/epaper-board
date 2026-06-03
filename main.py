@@ -22,6 +22,7 @@ import config
 from epaper import weather as weather_mod
 from epaper import electricity as elec_mod
 from epaper import aviation as aviation_mod
+from epaper import alerts as alerts_mod
 from epaper import render
 from epaper.display.base import get_backend
 
@@ -62,6 +63,7 @@ def gather():
         ("weather", weather_mod.get_weather),
         ("prices", elec_mod.get_prices),
         ("aviation", aviation_mod.get_aviation),
+        ("alerts", alerts_mod.get_alerts),
     ]
     results = {}
     with ThreadPoolExecutor(max_workers=len(sources)) as ex:
@@ -79,6 +81,17 @@ def gather():
     weather = results.get("weather")
     prices = results.get("prices")
     aviation = results.get("aviation")
+    alerts = results.get("alerts")
+
+    # Official FMI CAP warnings take priority; fall back to forecast-derived ones
+    # for any category the CAP feed doesn't cover (or if CAP is unavailable).
+    if weather is not None:
+        cap = [{"category": a["category"], "text": a["event"]}
+               for a in (alerts or [])]
+        cap_cats = {w["category"] for w in cap}
+        derived = [w for w in weather.get("warnings", [])
+                   if w["category"] not in cap_cats]
+        weather["warnings"] = (cap + derived)[:3]
 
     if weather is not None or prices is not None or aviation is not None:
         _save_cache(cache)

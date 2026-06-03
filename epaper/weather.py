@@ -172,42 +172,42 @@ WIND_STRONG_GUST = 20.0
 
 
 def _warnings(hourly):
-    """Derive weather warnings from the next-24h forecast (FMI has no open
-    warnings WFS). Returns a short list of strings, most severe first."""
+    """Derive weather warnings from the next-24h forecast as a fallback for when
+    the FMI CAP feed (epaper/alerts.py) is unavailable. Returns a list of
+    {category, text}, most severe first."""
     window = hourly[:config.DETAIL_HOURS]
-    warns = []
+    warns = []  # (category, text, severity)
 
     thunder = [h for h in window if h["category"] == "thunder"]
     if thunder:
-        warns.append(("Thunderstorms %s" %
-                      _span(thunder), 3))
+        warns.append(("thunder", "Thunderstorms %s" % _span(thunder), 3))
 
     gust_peak = max(window, key=lambda h: (h["gust"] or 0))
     gp = gust_peak["gust"] or 0
     if gp >= WIND_STRONG_GUST:
-        warns.append(("Very strong wind, gusts %.0f m/s %s" %
+        warns.append(("wind", "Very strong wind, gusts %.0f m/s %s" %
                       (gp, gust_peak["time"].strftime("%H:%M")), 3))
     elif gp >= WIND_WARN_GUST:
-        warns.append(("Strong wind, gusts %.0f m/s %s" %
+        warns.append(("wind", "Strong wind, gusts %.0f m/s %s" %
                       (gp, gust_peak["time"].strftime("%H:%M")), 2))
 
     heavy = [h for h in window if h["precip"] >= 4.0]
     if heavy:
-        warns.append(("Heavy precipitation %s" % _span(heavy), 2))
+        warns.append(("rain", "Heavy precipitation %s" % _span(heavy), 2))
 
     snow = [h for h in window if h["category"] == "snow"]
     if snow and not thunder:
-        warns.append(("Snowfall %s" % _span(snow), 1))
+        warns.append(("snow", "Snowfall %s" % _span(snow), 1))
 
-    # FMI forecast warning parameters (forest fire, traffic/road, ...): a finite
-    # value >= 1 means a warning is in effect; NaN/None means none. Regional +
-    # daily, so just flag presence anywhere in the window.
+    # FMI forecast warning parameters (forest fire, traffic/road): finite >= 1
+    # means active. NaN/None means none.
     for param, label, sev in FMI_WARNING_PARAMS:
         if any((h["warn"].get(param) or 0) >= 1 for h in window):
-            warns.append((label, sev))
+            cat = "fire" if "Fire" in param else "traffic"
+            warns.append((cat, label, sev))
 
-    warns.sort(key=lambda w: -w[1])
-    return [w[0] for w in warns[:3]]
+    warns.sort(key=lambda w: -w[2])
+    return [{"category": c, "text": t} for c, t, _ in warns[:3]]
 
 
 def _span(rows):

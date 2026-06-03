@@ -44,6 +44,12 @@ def main():
                       dict(category="clear", color=icons.BLACK, night=True,
                            moon=(frac, wax))))
 
+    # warning icons (drawn red, via draw_warning_icon)
+    warn_cats = ["fire", "flood", "traffic", "wind", "thunder", "rain",
+                 "snow", "heat", "cold", "generic"]
+    for c in warn_cats:
+        items.append(("warn:%s" % c, dict(_warn=c)))
+
     rows = (len(items) + COLS - 1) // COLS
     W = COLS * (CELL + PAD) + PAD
     H = rows * (CELL + PAD + 16) + PAD
@@ -57,7 +63,10 @@ def main():
         y = PAD + r * (CELL + PAD + 16)
         d.rectangle([x - 2, y - 2, x + CELL + 2, y + CELL + 2],
                     outline=(200, 200, 200))
-        icons.draw_icon(d, x=x, y=y, size=CELL, **kw)
+        if "_warn" in kw:
+            icons.draw_warning_icon(d, kw["_warn"], x, y, CELL, color=icons.RED)
+        else:
+            icons.draw_icon(d, x=x, y=y, size=CELL, **kw)
         d.text((x, y + CELL + 2), label, font=f, fill=(0, 0, 0))
 
     os.makedirs(config.OUT_DIR, exist_ok=True)
