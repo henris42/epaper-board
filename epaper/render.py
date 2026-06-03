@@ -423,18 +423,23 @@ def _aviation(d, av):
         return
     mono = font(config.FONT_MONO, 12)
     tx = 62                                   # mono text column (label-free)
-    y = top + 7
-    lh = 14
+    maxw = W - 8 - tx
+    y = top + 5
+    lh = 15
 
+    # METAR on one line
     text(d, (8, y), "METAR", lab)
-    text(d, (tx, y + 1), _fit(d, av.get("metar", ""), mono, W - 8 - tx), mono)
-    y += lh + 2
+    text(d, (tx, y + 1), _fit(d, av.get("metar", ""), mono, maxw), mono)
+    y += lh
 
-    taf = av.get("taf", [])
-    for i, ln in enumerate(taf[:config.AVIATION_TAF_LINES]):
+    # then the TAF, word-wrapped (the feed's own line breaks are dropped)
+    taf = av.get("taf", "")
+    if isinstance(taf, list):                 # backward-compat with old cache
+        taf = " ".join(taf)
+    for i, ln in enumerate(_wrap(d, taf, mono, maxw, config.AVIATION_TAF_LINES)):
         if i == 0:
             text(d, (8, y), "TAF", lab)
-        text(d, (tx, y + 1), _fit(d, ln, mono, W - 8 - tx), mono)
+        text(d, (tx, y + 1), ln, mono)
         y += lh
 
 
@@ -445,6 +450,26 @@ def _fit(d, s, fnt, maxw):
     while s and _bbox(d, s + "…", fnt)[2] > maxw:
         s = s[:-1]
     return s + "…"
+
+
+def _wrap(d, s, fnt, maxw, maxlines):
+    """Word-wrap s to maxw px, at most maxlines lines (last gets an ellipsis if
+    it overflows)."""
+    lines, cur = [], ""
+    for word in s.split():
+        trial = (cur + " " + word).strip()
+        if not cur or _bbox(d, trial, fnt)[2] <= maxw:
+            cur = trial
+        else:
+            lines.append(cur)
+            cur = word
+            if len(lines) >= maxlines:
+                break
+    if cur and len(lines) < maxlines:
+        lines.append(cur)
+    if len(lines) == maxlines and cur and lines[-1] != cur:
+        lines[-1] = _fit(d, lines[-1] + " …", fnt, maxw)
+    return lines[:maxlines]
 
 
 # ---------------------------------------------------------------------------

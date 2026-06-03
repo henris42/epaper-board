@@ -49,7 +49,7 @@ DETAIL_HOURS = 24                    # hours shown in the detailed strip
 # Aviation weather (METAR/TAF) shown as raw text at the bottom of the panel
 # ---------------------------------------------------------------------------
 AVIATION_ICAO = "EFHK"               # Helsinki-Vantaa
-AVIATION_TAF_LINES = 4               # max TAF lines rendered
+AVIATION_TAF_LINES = 3               # max wrapped TAF lines (fits above bottom edge)
 
 # FMI official warnings (CAP feed). Filtered to LATITUDE/LONGITUDE by polygon.
 # The per-language feed file is chosen in epaper/i18n.py (ALERT_FEED).

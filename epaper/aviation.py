@@ -25,25 +25,19 @@ def get_aviation(icao=None):
     if metar.upper().startswith("METAR "):
         metar = metar[6:]
 
-    taf_raw = _get("taf", icao).strip()
-    taf_lines = []
-    for ln in taf_raw.splitlines():
-        ln = ln.strip()
-        if ln:
-            taf_lines.append(ln)
-    # the first line may start with "TAF "; drop that token for compactness
-    if taf_lines and taf_lines[0].upper().startswith("TAF "):
-        taf_lines[0] = taf_lines[0][4:]
+    # collapse the source's line breaks into one normalised string; the renderer
+    # word-wraps it to the panel width (the raw feed breaks mid change-group).
+    taf = " ".join(_get("taf", icao).split())
+    if taf.upper().startswith("TAF "):
+        taf = taf[4:]
 
-    if not metar and not taf_lines:
+    if not metar and not taf:
         raise RuntimeError("no METAR/TAF for %s" % icao)
-    return {"icao": icao, "metar": metar, "taf": taf_lines}
+    return {"icao": icao, "metar": metar, "taf": taf}
 
 
 if __name__ == "__main__":
     a = get_aviation()
     print("ICAO:", a["icao"])
     print("METAR:", a["metar"])
-    print("TAF:")
-    for ln in a["taf"]:
-        print("   ", ln)
+    print("TAF:", a["taf"])
