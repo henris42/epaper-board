@@ -3,14 +3,16 @@
 A Python app that drives a **Waveshare 7.5" black/white/red e-paper panel**
 (`epd7in5b` V2, 800×480) from an **Odroid C2** (Ubuntu 20.04). It shows:
 
-- **Current conditions** for Kauniainen — big temperature, sky symbol, wind, and
-  today's **sunrise / sunset** times. The icon is **night-aware**: a **moon drawn
-  at its real phase** replaces the sun after sunset.
+- **Current conditions** for Kauniainen — big temperature, sky symbol, wind
+  (direction + speed), humidity, and today's **sunrise / sunset** times. The icon
+  is **night-aware**: a **moon drawn at its real phase** replaces the sun after
+  sunset.
 - **Next 24 hours** — official FMI forecast as a temperature curve with hourly
   weather symbols (night-aware) and precipitation bars. **Bad weather (rain,
   drizzle, snow, sleet, thunder) is drawn in red**, as are sub-zero temperatures.
 - **Weather warnings** — a red alert banner derived from the forecast
-  (thunderstorms, strong wind gusts, heavy precipitation, snowfall).
+  (thunderstorms, strong wind gusts, heavy precipitation, snowfall, and FMI's
+  forest-fire warning).
 - **Electricity prices** (Nord Pool FI spot from [sahkotin.fi](https://sahkotin.fi))
   as a **15-minute** bar chart from the previous half hour through whatever is
   published ahead. Slots **at or above the threshold (10 c/kWh incl. VAT) are

@@ -51,8 +51,18 @@ _NS = {"wfs": "http://www.opengis.net/wfs/2.0",
        "BsWfs": "http://xml.fmi.fi/schema/wfs/2.0"}
 
 # Parameters requested from FMI (order matters only for the URL).
-_PARAMS = ["Temperature", "WindSpeedMS", "WindGust",
-           "WeatherSymbol3", "Precipitation1h"]
+_PARAMS = ["Temperature", "Humidity", "WindSpeedMS", "WindDirection",
+           "WindGust", "WeatherSymbol3", "Precipitation1h", "ForestFireWarning"]
+
+# 16-point compass for wind direction (meteorological: direction wind blows FROM)
+_COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+            "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+
+
+def compass(deg):
+    if deg is None:
+        return ""
+    return _COMPASS[int((deg % 360) / 22.5 + 0.5) % 16]
 
 
 def _build_url():
@@ -106,9 +116,12 @@ def _parse(xml_bytes):
             "time": to_local(dt_utc),
             "time_utc": dt_utc,
             "temp": r.get("Temperature"),
+            "humidity": r.get("Humidity"),
             "wind": r.get("WindSpeedMS"),
+            "wind_dir": r.get("WindDirection"),
             "gust": r.get("WindGust"),
             "precip": r.get("Precipitation1h") or 0.0,
+            "fire": r.get("ForestFireWarning"),
             "symbol": int(sym) if sym is not None else None,
             "category": cat,
             "text": text,
@@ -175,6 +188,11 @@ def _warnings(hourly):
     snow = [h for h in window if h["category"] == "snow"]
     if snow and not thunder:
         warns.append(("Snowfall %s" % _span(snow), 1))
+
+    # FMI ForestFireWarning: finite value (>= 1) means a warning is in effect;
+    # NaN/None means none. Regional + daily, so just flag presence in the window.
+    if any((h.get("fire") or 0) >= 1 for h in window):
+        warns.append(("Forest fire warning", 2))
 
     warns.sort(key=lambda w: -w[1])
     return [w[0] for w in warns[:3]]

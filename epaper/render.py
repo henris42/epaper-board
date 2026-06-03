@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageChops
 import config
 from epaper import icons
 from epaper.icons import BLACK, RED, WHITE
+from epaper.weather import compass
 
 W, H = config.EPD_WIDTH, config.EPD_HEIGHT
 
@@ -103,26 +104,34 @@ def _icon_args(h, moon):
 def _current(d, cur, sun, moon):
     x0, x1 = 6, 250
     cx = (x0 + x1) // 2
-    icons.draw_icon(d, cur["category"], cx - 40, 50, 80, **_icon_args(cur, moon))
+    icons.draw_icon(d, cur["category"], cx - 35, 46, 70, **_icon_args(cur, moon))
     temp = cur["temp"]
     freezing = temp is not None and temp <= 0
-    text(d, (cx, 130), _fmt_temp(temp), _f(54, bold=True),
+    text(d, (cx, 114), _fmt_temp(temp), _f(50, bold=True),
          fill=RED if freezing else BLACK, anchor="ma")
-    text(d, (cx, 186), cur["text"], _f(18),
+    text(d, (cx, 166), cur["text"], _f(17),
          fill=RED if cur.get("bad") else BLACK, anchor="ma")
+
+    # wind: direction (compass) + speed (+ gust if notably higher)
     wind = cur.get("wind") or 0
     gust = cur.get("gust")
-    wtext = "Wind %.0f m/s" % wind
+    wd = compass(cur.get("wind_dir"))
+    wtext = ("Wind %s %.0f m/s" % (wd, wind)) if wd else ("Wind %.0f m/s" % wind)
     if gust and gust == gust and gust >= wind + 1:   # finite & meaningfully higher
-        wtext += " (gust %.0f)" % gust
-    text(d, (cx, 208), wtext, _f(15), anchor="ma")
+        wtext += " (%.0f)" % gust
+    text(d, (cx, 188), wtext, _f(15), anchor="ma")
+
+    # humidity
+    hum = cur.get("humidity")
+    if hum is not None:
+        text(d, (cx, 207), "Humidity %.0f%%" % hum, _f(15), anchor="ma")
 
     # sunrise / sunset for today's big view
     if sun and (sun.get("sunrise") or sun.get("sunset")):
         sr = sun["sunrise"].strftime("%H:%M") if sun.get("sunrise") else "--"
         ss = sun["sunset"].strftime("%H:%M") if sun.get("sunset") else "--"
-        _suntimes(d, cx, 230, sr, ss)
-    d.line([254, 50, 254, 226], fill=BLACK, width=1)
+        _suntimes(d, cx, 227, sr, ss)
+    d.line([254, 50, 254, 246], fill=BLACK, width=1)
 
 
 def _suntimes(d, cx, y, sr, ss):
