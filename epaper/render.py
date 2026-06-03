@@ -426,17 +426,21 @@ def _aviation(d, av):
     maxw = W - 8 - tx
     y = top + 5
     lh = 15
+    total = 4                                 # lines that fit above the bottom edge
 
-    # METAR on one line
-    text(d, (8, y), "METAR", lab)
-    text(d, (tx, y + 1), _fit(d, av.get("metar", ""), mono, maxw), mono)
-    y += lh
+    # METAR first (wraps to the next line if long); TAF gets the remaining lines
+    metar_lines = _wrap(d, av.get("metar", ""), mono, maxw, 2)
+    for i, ln in enumerate(metar_lines):
+        if i == 0:
+            text(d, (8, y), "METAR", lab)
+        text(d, (tx, y + 1), ln, mono)
+        y += lh
 
-    # then the TAF, word-wrapped (the feed's own line breaks are dropped)
     taf = av.get("taf", "")
     if isinstance(taf, list):                 # backward-compat with old cache
         taf = " ".join(taf)
-    for i, ln in enumerate(_wrap(d, taf, mono, maxw, config.AVIATION_TAF_LINES)):
+    taf_cap = max(1, min(config.AVIATION_TAF_LINES, total - len(metar_lines)))
+    for i, ln in enumerate(_wrap(d, taf, mono, maxw, taf_cap)):
         if i == 0:
             text(d, (8, y), "TAF", lab)
         text(d, (tx, y + 1), ln, mono)
